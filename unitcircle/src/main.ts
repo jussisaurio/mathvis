@@ -4,12 +4,14 @@ const app = document.querySelector<HTMLDivElement>("#app")!;
 
 // Create a canvas that has a grid of 100x100px squares representing a 2D mathematical plane
 
-// x = 1 in the mathematical plane is 400px in the canvas
-const PIXELS_PER_UNIT = 400;
+// if x increases by 1, then the x coordinate increases by 400px
+const PX_PER_GRID_UNIT = 400;
+const CANVAS_OFFSETS = { x: 0, y: 0 };
+const ORIGIN = { x: PX_PER_GRID_UNIT, y: PX_PER_GRID_UNIT };
 
 const canvas = document.createElement("canvas");
-canvas.width = PIXELS_PER_UNIT * 2;
-canvas.height = PIXELS_PER_UNIT * 2;
+canvas.width = PX_PER_GRID_UNIT * 2;
+canvas.height = PX_PER_GRID_UNIT * 2;
 canvas.style.width = "100%";
 canvas.style.height = "100%";
 canvas.style.border = "1px solid black";
@@ -19,6 +21,94 @@ app.appendChild(canvas);
 
 const ctx = canvas.getContext("2d")!;
 
+function gridMoveTo(x: number, y: number) {
+  ctx.moveTo(
+    CANVAS_OFFSETS.x + ORIGIN.x + x * PX_PER_GRID_UNIT,
+    CANVAS_OFFSETS.y + ORIGIN.y - y * PX_PER_GRID_UNIT
+  );
+}
+
+function gridLineTo(x: number, y: number) {
+  ctx.lineTo(
+    CANVAS_OFFSETS.x + ORIGIN.x + x * PX_PER_GRID_UNIT,
+    CANVAS_OFFSETS.y + ORIGIN.y - y * PX_PER_GRID_UNIT
+  );
+}
+
+function gridDrawLine(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  strokeStyle: string = "black",
+  lineWidth: number = 1,
+  lineDash: number[] = []
+) {
+  ctx.beginPath();
+  gridMoveTo(x1, y1);
+  gridLineTo(x2, y2);
+  ctx.strokeStyle = strokeStyle;
+  ctx.lineWidth = lineWidth;
+  ctx.setLineDash(lineDash);
+  ctx.stroke();
+}
+
+function gridWriteText(
+  text: string,
+  x: number,
+  y: number,
+  xOffset: number = 0,
+  yOffset: number = 0,
+  font: string = "20px Arial",
+  fillStyle: string = "black"
+) {
+  ctx.beginPath();
+  ctx.font = font;
+  ctx.fillStyle = fillStyle;
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "center";
+  ctx.strokeText(
+    text,
+    ORIGIN.x + x * PX_PER_GRID_UNIT + xOffset,
+    ORIGIN.y - y * PX_PER_GRID_UNIT + yOffset
+  );
+}
+
+type RectProps = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fillStyle?: string;
+  strokeStyle?: string;
+  lineWidth?: number;
+  lineDash?: number[];
+};
+
+function gridDrawRect(props: RectProps) {
+  const { x, y, width, height, fillStyle, strokeStyle, lineWidth, lineDash } =
+    props;
+
+  ctx.beginPath();
+  ctx.fillStyle = fillStyle || "transparent";
+  ctx.strokeStyle = strokeStyle || "black";
+  ctx.lineWidth = lineWidth || 1;
+  ctx.setLineDash(lineDash || []);
+
+  ctx.strokeRect(
+    CANVAS_OFFSETS.x + ORIGIN.x + x * PX_PER_GRID_UNIT,
+    CANVAS_OFFSETS.y + ORIGIN.y - y * PX_PER_GRID_UNIT,
+    width * PX_PER_GRID_UNIT,
+    height * PX_PER_GRID_UNIT
+  );
+  ctx.fillRect(
+    CANVAS_OFFSETS.x + ORIGIN.x + x * PX_PER_GRID_UNIT,
+    CANVAS_OFFSETS.y + ORIGIN.y - y * PX_PER_GRID_UNIT,
+    width * PX_PER_GRID_UNIT,
+    height * PX_PER_GRID_UNIT
+  );
+}
+
 function drawBase() {
   // undo the stroke dash if there is one
   ctx.setLineDash([]);
@@ -26,125 +116,124 @@ function drawBase() {
   ctx.textAlign = "center";
   ctx.strokeStyle = "lightgray";
   ctx.lineWidth = 1;
-  for (let x = 0; x < PIXELS_PER_UNIT * 2; x += PIXELS_PER_UNIT / 4) {
-    for (let y = 0; y < PIXELS_PER_UNIT * 2; y += PIXELS_PER_UNIT / 4) {
-      ctx.strokeRect(x, y, PIXELS_PER_UNIT / 4, PIXELS_PER_UNIT / 4);
+  for (let x = -1; x <= 1; x += 0.25) {
+    for (let y = -1; y <= 1; y += 0.25) {
+      gridDrawRect({
+        x,
+        y,
+        width: 0.25,
+        height: 0.25,
+        strokeStyle: "lightgray",
+      });
     }
   }
 
   // Draw a unit circle
 
   ctx.beginPath();
-  ctx.arc(PIXELS_PER_UNIT, PIXELS_PER_UNIT, PIXELS_PER_UNIT, 0, 2 * Math.PI);
+  ctx.arc(ORIGIN.x, ORIGIN.y, PX_PER_GRID_UNIT, 0, 2 * Math.PI);
   ctx.strokeStyle = "black";
   ctx.stroke();
 
   // Draw the axes with black
 
-  ctx.beginPath();
-  ctx.moveTo(0, PIXELS_PER_UNIT);
-  ctx.lineTo(PIXELS_PER_UNIT * 2, PIXELS_PER_UNIT);
-  ctx.moveTo(PIXELS_PER_UNIT, 0);
-  ctx.lineTo(PIXELS_PER_UNIT, PIXELS_PER_UNIT * 2);
-  ctx.strokeStyle = "black";
-  ctx.stroke();
+  gridDrawLine(-1, 0, 1, 0);
+  gridDrawLine(0, 1, 0, -1);
 
   // Draw arrows (1,0), (0,1), (-1,0), (0,-1) with black
 
   ctx.beginPath();
-  ctx.moveTo(PIXELS_PER_UNIT + PIXELS_PER_UNIT, PIXELS_PER_UNIT);
-  ctx.lineTo(PIXELS_PER_UNIT + PIXELS_PER_UNIT - 10, PIXELS_PER_UNIT - 5);
-  ctx.lineTo(PIXELS_PER_UNIT + PIXELS_PER_UNIT - 10, PIXELS_PER_UNIT + 5);
-  ctx.lineTo(PIXELS_PER_UNIT + PIXELS_PER_UNIT, PIXELS_PER_UNIT);
-  ctx.moveTo(PIXELS_PER_UNIT, PIXELS_PER_UNIT + PIXELS_PER_UNIT);
-  ctx.lineTo(PIXELS_PER_UNIT - 5, PIXELS_PER_UNIT + PIXELS_PER_UNIT - 10);
-  ctx.lineTo(PIXELS_PER_UNIT + 5, PIXELS_PER_UNIT + PIXELS_PER_UNIT - 10);
-  ctx.lineTo(PIXELS_PER_UNIT, PIXELS_PER_UNIT + PIXELS_PER_UNIT);
-  ctx.moveTo(PIXELS_PER_UNIT - PIXELS_PER_UNIT, PIXELS_PER_UNIT);
-  ctx.lineTo(PIXELS_PER_UNIT - PIXELS_PER_UNIT + 10, PIXELS_PER_UNIT - 5);
-  ctx.lineTo(PIXELS_PER_UNIT - PIXELS_PER_UNIT + 10, PIXELS_PER_UNIT + 5);
-  ctx.lineTo(PIXELS_PER_UNIT - PIXELS_PER_UNIT, PIXELS_PER_UNIT);
-  ctx.moveTo(PIXELS_PER_UNIT, PIXELS_PER_UNIT - PIXELS_PER_UNIT);
-  ctx.lineTo(PIXELS_PER_UNIT - 5, PIXELS_PER_UNIT - PIXELS_PER_UNIT + 10);
-  ctx.lineTo(PIXELS_PER_UNIT + 5, PIXELS_PER_UNIT - PIXELS_PER_UNIT + 10);
-  ctx.lineTo(PIXELS_PER_UNIT, PIXELS_PER_UNIT - PIXELS_PER_UNIT);
+  ctx.moveTo(PX_PER_GRID_UNIT + PX_PER_GRID_UNIT, PX_PER_GRID_UNIT);
+  ctx.lineTo(PX_PER_GRID_UNIT + PX_PER_GRID_UNIT - 10, PX_PER_GRID_UNIT - 5);
+  ctx.lineTo(PX_PER_GRID_UNIT + PX_PER_GRID_UNIT - 10, PX_PER_GRID_UNIT + 5);
+  ctx.lineTo(PX_PER_GRID_UNIT + PX_PER_GRID_UNIT, PX_PER_GRID_UNIT);
+  ctx.moveTo(PX_PER_GRID_UNIT, PX_PER_GRID_UNIT + PX_PER_GRID_UNIT);
+  ctx.lineTo(PX_PER_GRID_UNIT - 5, PX_PER_GRID_UNIT + PX_PER_GRID_UNIT - 10);
+  ctx.lineTo(PX_PER_GRID_UNIT + 5, PX_PER_GRID_UNIT + PX_PER_GRID_UNIT - 10);
+  ctx.lineTo(PX_PER_GRID_UNIT, PX_PER_GRID_UNIT + PX_PER_GRID_UNIT);
+  ctx.moveTo(PX_PER_GRID_UNIT - PX_PER_GRID_UNIT, PX_PER_GRID_UNIT);
+  ctx.lineTo(PX_PER_GRID_UNIT - PX_PER_GRID_UNIT + 10, PX_PER_GRID_UNIT - 5);
+  ctx.lineTo(PX_PER_GRID_UNIT - PX_PER_GRID_UNIT + 10, PX_PER_GRID_UNIT + 5);
+  ctx.lineTo(PX_PER_GRID_UNIT - PX_PER_GRID_UNIT, PX_PER_GRID_UNIT);
+  ctx.moveTo(PX_PER_GRID_UNIT, PX_PER_GRID_UNIT - PX_PER_GRID_UNIT);
+  ctx.lineTo(PX_PER_GRID_UNIT - 5, PX_PER_GRID_UNIT - PX_PER_GRID_UNIT + 10);
+  ctx.lineTo(PX_PER_GRID_UNIT + 5, PX_PER_GRID_UNIT - PX_PER_GRID_UNIT + 10);
+  ctx.lineTo(PX_PER_GRID_UNIT, PX_PER_GRID_UNIT - PX_PER_GRID_UNIT);
   ctx.strokeStyle = "black";
   ctx.stroke();
 
   // Write the coordinates of the arrows with black text
 
-  ctx.font = "20px Arial";
-  ctx.fillStyle = "black";
-  ctx.fillText(
-    "(1,0)",
-    PIXELS_PER_UNIT + PIXELS_PER_UNIT - 30,
-    PIXELS_PER_UNIT + 20
-  );
-  ctx.fillText(
-    "(0,-1)",
-    PIXELS_PER_UNIT + 30,
-    PIXELS_PER_UNIT + PIXELS_PER_UNIT - 30
-  );
-  ctx.fillText(
-    "(-1,0)",
-    PIXELS_PER_UNIT - PIXELS_PER_UNIT + 30,
-    PIXELS_PER_UNIT + 20
-  );
-  ctx.fillText(
-    "(0,1)",
-    PIXELS_PER_UNIT + 30,
-    PIXELS_PER_UNIT - PIXELS_PER_UNIT + 30
-  );
+  gridWriteText("(1,0)", 1, 0, -30, 20);
+  gridWriteText("(0,-1)", 0, -1, 30, -30);
+  gridWriteText("(-1,0)", -1, 0, 30, 20);
+  gridWriteText("(0,1)", 0, 1, 30, 30);
 }
-
-drawBase();
 
 // Get the mouse coordinates and draw a line from the origin to the unit circle so that the line goes through the mouse coordinates
 
-function drawLine(x: number, y: number) {
+function drawLine(x: number, y: number, strokeStyle: string = "black") {
   ctx.beginPath();
-  ctx.moveTo(PIXELS_PER_UNIT, PIXELS_PER_UNIT);
+  ctx.moveTo(ORIGIN.x, ORIGIN.y);
   ctx.lineTo(x, y);
-  ctx.strokeStyle = "red";
+  ctx.strokeStyle = strokeStyle;
   ctx.stroke();
+}
+
+function positionAsGridCoordinates(x: number, y: number) {
+  return [
+    (x - ORIGIN.x - CANVAS_OFFSETS.x) / PX_PER_GRID_UNIT,
+    (y - ORIGIN.y - CANVAS_OFFSETS.y) / PX_PER_GRID_UNIT,
+  ];
+}
+
+function gridCoordinatesAsPosition(x: number, y: number) {
+  return [
+    ORIGIN.x + CANVAS_OFFSETS.x + x * PX_PER_GRID_UNIT,
+    ORIGIN.y + CANVAS_OFFSETS.y + y * PX_PER_GRID_UNIT,
+  ];
 }
 
 // Draw a line from the origin to the unit circle so that the line goes through the mouse coordinates
 
-function drawLineFromMouse(e: MouseEvent) {
+function handleMouseMove(e: MouseEvent) {
   const mouseX = e.clientX - canvas.offsetLeft;
   const mouseY = e.clientY - canvas.offsetTop;
+  const [mouseXAsCoords, mouseYAsCoords] = positionAsGridCoordinates(
+    mouseX,
+    mouseY
+  );
 
   // Find the coordinates of the point on the circle that goes from the origin through the mouse coordinates to the circle
 
   const x =
-    PIXELS_PER_UNIT +
-    (PIXELS_PER_UNIT * (mouseX - PIXELS_PER_UNIT)) /
+    ORIGIN.x +
+    (PX_PER_GRID_UNIT * (mouseX - PX_PER_GRID_UNIT)) /
       Math.sqrt(
-        (mouseX - PIXELS_PER_UNIT) ** 2 + (mouseY - PIXELS_PER_UNIT) ** 2
+        (mouseX - PX_PER_GRID_UNIT) ** 2 + (mouseY - PX_PER_GRID_UNIT) ** 2
       );
   const y =
-    PIXELS_PER_UNIT +
-    (PIXELS_PER_UNIT * (mouseY - PIXELS_PER_UNIT)) /
+    PX_PER_GRID_UNIT +
+    (PX_PER_GRID_UNIT * (mouseY - PX_PER_GRID_UNIT)) /
       Math.sqrt(
-        (mouseX - PIXELS_PER_UNIT) ** 2 + (mouseY - PIXELS_PER_UNIT) ** 2
+        (mouseX - PX_PER_GRID_UNIT) ** 2 + (mouseY - PX_PER_GRID_UNIT) ** 2
       );
 
   // Find the point 60% of the way from the origin to the point on the circle
 
   const xThreeQuarters =
-    PIXELS_PER_UNIT +
-    ((x - PIXELS_PER_UNIT) * 3) / 4 +
-    ((mouseX - PIXELS_PER_UNIT) * 1) / 4;
+    PX_PER_GRID_UNIT +
+    ((x - PX_PER_GRID_UNIT) * 3) / 4 +
+    ((mouseX - PX_PER_GRID_UNIT) * 1) / 4;
   const yThreeQuarters =
-    PIXELS_PER_UNIT +
-    ((y - PIXELS_PER_UNIT) * 3) / 4 +
-    ((mouseY - PIXELS_PER_UNIT) * 1) / 4;
+    PX_PER_GRID_UNIT +
+    ((y - PX_PER_GRID_UNIT) * 3) / 4 +
+    ((mouseY - PX_PER_GRID_UNIT) * 1) / 4;
 
   // calculate the cosine and sine. the hypotenuse is 1, so the cosine and sine are the x and y coordinates of the point on the circle
 
-  const cos = (x - PIXELS_PER_UNIT) / PIXELS_PER_UNIT;
-  const sin = (-1 * (y - PIXELS_PER_UNIT)) / PIXELS_PER_UNIT;
+  const cos = (x - PX_PER_GRID_UNIT) / PX_PER_GRID_UNIT;
+  const sin = (-1 * (y - PX_PER_GRID_UNIT)) / PX_PER_GRID_UNIT;
   const angleRadiansStartingFromX1Y0 =
     Math.atan2(sin, cos) < 0
       ? Math.PI * 2 + Math.atan2(sin, cos)
@@ -163,7 +252,7 @@ function drawLineFromMouse(e: MouseEvent) {
 
   ctx.beginPath();
   ctx.moveTo(x, y);
-  ctx.lineTo(x, PIXELS_PER_UNIT);
+  ctx.lineTo(x, PX_PER_GRID_UNIT);
 
   ctx.setLineDash([5, 5]);
   ctx.strokeStyle = "red";
@@ -177,7 +266,7 @@ function drawLineFromMouse(e: MouseEvent) {
     `sin: ${sin.toFixed(2)}`,
     x + 10,
     // in the middle of the line
-    y + (PIXELS_PER_UNIT - y) / 2
+    y + (PX_PER_GRID_UNIT - y) / 2
   );
 
   // Draw the cosine as a red dotted line i.e. a line that goes from the origin to the (x, 0)
@@ -185,15 +274,15 @@ function drawLineFromMouse(e: MouseEvent) {
   // First erase the part of the x-axis from (0,0) to (x,0)
 
   ctx.clearRect(
-    x <= PIXELS_PER_UNIT ? x : PIXELS_PER_UNIT,
-    PIXELS_PER_UNIT,
-    Math.abs(x - PIXELS_PER_UNIT),
+    x <= PX_PER_GRID_UNIT ? x : PX_PER_GRID_UNIT,
+    PX_PER_GRID_UNIT,
+    Math.abs(x - PX_PER_GRID_UNIT),
     2
   );
 
   ctx.beginPath();
-  ctx.moveTo(PIXELS_PER_UNIT, PIXELS_PER_UNIT);
-  ctx.lineTo(x, PIXELS_PER_UNIT);
+  ctx.moveTo(PX_PER_GRID_UNIT, PX_PER_GRID_UNIT);
+  ctx.lineTo(x, PX_PER_GRID_UNIT);
 
   ctx.setLineDash([5, 5]);
   ctx.strokeStyle = "red";
@@ -206,14 +295,14 @@ function drawLineFromMouse(e: MouseEvent) {
   ctx.fillText(
     `cos: ${cos.toFixed(2)}`,
     // in the middle of the line
-    x + (PIXELS_PER_UNIT - x) / 2,
-    PIXELS_PER_UNIT - 10
+    x + (PX_PER_GRID_UNIT - x) / 2,
+    PX_PER_GRID_UNIT - 10
   );
 
   // Draw a tangent line that touches the (x,y) coordinates (i.e. is parallel to the red line)
 
-  const deltaX = x - PIXELS_PER_UNIT;
-  const deltaY = y - PIXELS_PER_UNIT;
+  const deltaX = x - PX_PER_GRID_UNIT;
+  const deltaY = y - PX_PER_GRID_UNIT;
 
   // from deltaX and deltaY we can calculate the slope of the tangent line
 
@@ -226,7 +315,7 @@ function drawLineFromMouse(e: MouseEvent) {
   const y1 = y;
 
   // y2 should always be 0 (i.e. the line should touch the x axis) so it is always PIXELS_PER_UNIT
-  const y2 = PIXELS_PER_UNIT;
+  const y2 = PX_PER_GRID_UNIT;
 
   // x2 is whatever it takes to go from x until y2 is 0
   // slopeOfParallelLine * (x2 - x) = y2 - y
@@ -236,7 +325,7 @@ function drawLineFromMouse(e: MouseEvent) {
   // x2 = (PIXELS_PER_UNIT - y + slopeOfParallelLine * x) / slopeOfParallelLine
 
   const x2 =
-    (PIXELS_PER_UNIT - y + slopeOfParallelLine * x) / slopeOfParallelLine;
+    (PX_PER_GRID_UNIT - y + slopeOfParallelLine * x) / slopeOfParallelLine;
 
   const x2Opposite = x - (x2 - x);
   const y2Opposite = y - (y2 - y);
@@ -264,9 +353,9 @@ function drawLineFromMouse(e: MouseEvent) {
 
   ctx.beginPath();
   ctx.arc(
-    PIXELS_PER_UNIT,
-    PIXELS_PER_UNIT,
-    PIXELS_PER_UNIT / 8,
+    PX_PER_GRID_UNIT,
+    PX_PER_GRID_UNIT,
+    PX_PER_GRID_UNIT / 8,
     Math.PI * 2 - angleRadiansStartingFromX1Y0,
     0,
     false
@@ -281,9 +370,11 @@ function drawLineFromMouse(e: MouseEvent) {
   ctx.fillStyle = "red";
   ctx.fillText(
     angleDegrees.toFixed(2) + "°",
-    PIXELS_PER_UNIT + PIXELS_PER_UNIT / 8 + 10,
-    PIXELS_PER_UNIT - PIXELS_PER_UNIT / 8 + 10
+    PX_PER_GRID_UNIT + PX_PER_GRID_UNIT / 8 + 10,
+    PX_PER_GRID_UNIT - PX_PER_GRID_UNIT / 8 + 10
   );
 }
 
-app.addEventListener("mousemove", drawLineFromMouse);
+drawBase();
+
+app.addEventListener("mousemove", handleMouseMove);
